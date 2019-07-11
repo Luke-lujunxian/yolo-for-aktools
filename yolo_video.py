@@ -1,24 +1,38 @@
 import sys
 import argparse
-from yolo import YOLO, detect_video
+from yolo import YOLO
 from PIL import Image
+import base64
 
-def detect_img(yolo):
-    while True:
-        img = input('Input image filename:')
-        try:
-            image = Image.open(img)
-        except:
-            print('Open Error! Try again!')
-            continue
-        else:
-            r_image = yolo.detect_image(image)
-            r_image.show()
-    yolo.close_session()
+
+def request(modelPath, anchorsPath, classesPath,OCRmodel,OCRanvhors,OCRclass,image):
+    parser = init()
+    FLAGS = parser.parse_args({
+        '--model': modelPath,
+        '--anchors': anchorsPath,
+        '--classes': classesPath,
+        '--gpu_num': 0,
+    })
+    FLAGSnum = parser.parse_args({
+        '--model': OCRmodel,
+        '--anchors': OCRanvhors,
+        '--classes': OCRclass,
+        '--gpu_num': 0,
+    })
+    return detect_img(YOLO(**vars(FLAGS)),image,YOLO(**vars(FLAGSnum)))
+
+
+def detect_img(objReg, image,numReg):
+    image = base64.b64decode(image)
+    out_boxes, out_scores, out_classes = objReg.detect_image(image)
+    objReg.close_session()
+
+
 
 FLAGS = None
 
-if __name__ == '__main__':
+
+def init():
     # class YOLO defines the default value, so suppress any default here
     parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
     '''
@@ -52,26 +66,17 @@ if __name__ == '__main__':
     Command line positional arguments -- for video detection mode
     '''
     parser.add_argument(
-        "--input", nargs='?', type=str,required=False,default='./path2your_video',
-        help = "Video input path"
+        "--input", nargs='?', type=str, required=False, default='./path2your_video',
+        help="Video input path"
     )
 
     parser.add_argument(
         "--output", nargs='?', type=str, default="",
-        help = "[Optional] Video output path"
+        help="[Optional] Video output path"
     )
+    return parser
 
-    FLAGS = parser.parse_args()
-
-    if FLAGS.image:
-        """
-        Image detection mode, disregard any remaining command line arguments
-        """
-        print("Image detection mode")
-        if "input" in FLAGS:
-            print(" Ignoring remaining command line arguments: " + FLAGS.input + "," + FLAGS.output)
-        detect_img(YOLO(**vars(FLAGS)))
-    elif "input" in FLAGS:
-        detect_video(YOLO(**vars(FLAGS)), FLAGS.input, FLAGS.output)
-    else:
-        print("Must specify at least video_input_path.  See usage with --help.")
+# The code above and yolo.py are modified from original code writtened by @qqwweee
+# https://github.com/qqwweee/keras-yolo3
+# The Original Code is using MIT license,
+# DO NOT remove this statement
